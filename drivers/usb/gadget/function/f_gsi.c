@@ -914,6 +914,8 @@ static void ipa_work_handler(struct work_struct *w)
 			log_event_dbg("%s: get = %d", __func__,
 				atomic_read(&gad_dev->power.usage_count));
 
+			msm_ep_set_mode(d_port->in_ep, USB_EP_GSI);
+			msm_ep_set_mode(d_port->out_ep, USB_EP_GSI);
 			/* Configure EPs for GSI */
 			ret = gsi_ep_enable(gsi);
 			if (ret) {
