@@ -326,6 +326,7 @@ def define_pineapple():
         "kernel/oplus_cpu/waker_identify/oplus_bsp_waker_identify.ko",
         "kernel/oplus_cpu/oplus_omrg/oplus_bsp_omrg.ko",
         "drivers/soc/oplus/mdmrst/oplus_mdmrst.ko",
+        "mm/mm_osvelte/oplus_bsp_mm_osvelte.ko",
         "drivers/soc/oplus/storage/common/storage_log/oplus_storage_log.ko",
         "drivers/soc/oplus/storage/common/oplus_uprobe/oplus_uprobe.ko",
         "drivers/soc/oplus/power/subsys_sleep_monitor/oplus_subsys_sleep_monitor.ko",
