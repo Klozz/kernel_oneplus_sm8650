@@ -318,6 +318,7 @@ def define_pineapple():
         "drivers/soc/oplus/boot/bootloader_log/bootloader_log.ko",
         "drivers/soc/oplus/boot/htb/tango32.ko",
         "drivers/soc/oplus/device_info/device_info.ko",
+        "drivers/soc/oplus/dft/common/olc/olc.ko",
         "drivers/soc/oplus/dft/common/feedback/kernel_fb.ko",
         "drivers/base/kernelFwUpdate/oplus_bsp_fw_update.ko",
         "drivers/base/touchpanel_notify/oplus_bsp_tp_notify.ko",
