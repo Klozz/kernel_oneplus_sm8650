@@ -302973,13 +302973,6 @@ function {
   parameter_id: 0xa9403390
 }
 function {
-  id: 0x34682689
-  return_type_id: 0x48b5725f
-  parameter_id: 0x92233392
-  parameter_id: 0x1d19a9d5
-  parameter_id: 0x33756485
-}
-function {
   id: 0x34781b82
   return_type_id: 0x33756485
   parameter_id: 0x17535b44
@@ -348941,15 +348934,6 @@ elf_symbol {
   crc: 0x7fbbd0bb
   type_id: 0x9eccfc59
   full_name: "android_rvh_probe_register"
-}
-elf_symbol {
-  id: 0x8df9ecba
-  name: "android_vh_pcpu_rwsem_handler"
-  is_defined: true
-  symbol_type: FUNCTION
-  crc: 0x86edb09b
-  type_id: 0x34682689
-  full_name: "android_vh_pcpu_rwsem_handler"
 }
 elf_symbol {
   id: 0x95eaf556

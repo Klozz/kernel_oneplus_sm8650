@@ -34,8 +34,6 @@
 #include <trace/hooks/dtask.h>
 #include <trace/hooks/rwsem.h>
 
-extern void rwsem_lock_handler(u64 sem, struct task_struct *tsk, unsigned long jiffies);
-extern void rwsem_read_wait_handler(struct rw_semaphore *sem);
 /*
  * The least significant 2 bits of the owner value has the following
  * meanings when set.
@@ -252,7 +250,6 @@ static inline bool rwsem_read_trylock(struct rw_semaphore *sem, long *cntp)
 	if (!(*cntp & RWSEM_READ_FAILED_MASK)) {
 		rwsem_set_reader_owned(sem);
 		trace_android_vh_record_rwsem_lock_starttime(current, jiffies);
-		rwsem_lock_handler((u64)sem, current, jiffies);
 		return true;
 	}
 
@@ -267,7 +264,6 @@ static inline bool rwsem_write_trylock(struct rw_semaphore *sem)
 	preempt_disable();
 	if (atomic_long_try_cmpxchg_acquire(&sem->count, &tmp, RWSEM_WRITER_LOCKED)) {
 		trace_android_vh_record_rwsem_lock_starttime(current, jiffies);
-		rwsem_lock_handler((u64)sem, current, jiffies);
 		rwsem_set_owner(sem);
 		ret = true;
 	}
@@ -1029,8 +1025,6 @@ rwsem_down_read_slowpath(struct rw_semaphore *sem, long count, unsigned int stat
 	struct rwsem_waiter waiter;
 	DEFINE_WAKE_Q(wake_q);
 	bool already_on_list = false;
-	bool steal = true;
-	bool rspin = false;
 
 	/*
 	 * To prevent a constant stream of readers from starving a sleeping
@@ -1044,8 +1038,7 @@ rwsem_down_read_slowpath(struct rw_semaphore *sem, long count, unsigned int stat
 	/*
 	 * Reader optimistic lock stealing.
 	 */
-	trace_android_vh_rwsem_direct_rsteal(sem, &steal);
-	if (steal && !(count & (RWSEM_WRITER_LOCKED | RWSEM_FLAG_HANDOFF))) {
+	if (!(count & (RWSEM_WRITER_LOCKED | RWSEM_FLAG_HANDOFF))) {
 		rwsem_set_reader_owned(sem);
 		lockevent_inc(rwsem_rlock_steal);
 
@@ -1053,8 +1046,7 @@ rwsem_down_read_slowpath(struct rw_semaphore *sem, long count, unsigned int stat
 		 * Wake up other readers in the wait queue if it is
 		 * the first reader.
 		 */
-wake_readers:
-		if ((rcnt == 1 || rspin) && (count & RWSEM_FLAG_WAITERS)) {
+		if ((rcnt == 1) && (count & RWSEM_FLAG_WAITERS)) {
 			raw_spin_lock_irq(&sem->wait_lock);
 			if (!list_empty(&sem->wait_list))
 				rwsem_mark_wake(sem, RWSEM_WAKE_READ_OWNED,
@@ -1063,16 +1055,8 @@ wake_readers:
 			wake_up_q(&wake_q);
 		}
 		trace_android_vh_record_rwsem_lock_starttime(current, jiffies);
-		rwsem_lock_handler((u64)sem, current, jiffies);
 		return sem;
 	}
-	/*
-	 * Reader optimistic spinning and stealing.
-	 */
-	trace_android_vh_rwsem_optimistic_rspin(sem, &adjustment, &rspin);
-	if (rspin)
-		goto wake_readers;
-
 queue:
 	waiter.task = current;
 	waiter.type = RWSEM_WAITING_FOR_READ;
@@ -1119,7 +1103,6 @@ queue:
 
 	/* wait to be given the lock */
 	trace_android_vh_rwsem_read_wait_start(sem);
-	rwsem_read_wait_handler(sem);
 	for (;;) {
 		set_current_state(state);
 		if (!smp_load_acquire(&waiter.task)) {
@@ -1143,7 +1126,6 @@ queue:
 	lockevent_inc(rwsem_rlock);
 	trace_contention_end(sem, 0);
 	trace_android_vh_record_rwsem_lock_starttime(current, jiffies);
-	rwsem_lock_handler((u64)sem, current, jiffies);
 	return sem;
 
 out_nolock:
@@ -1169,7 +1151,6 @@ rwsem_down_write_slowpath(struct rw_semaphore *sem, int state)
 	if (rwsem_can_spin_on_owner(sem) && rwsem_optimistic_spin(sem)) {
 		/* rwsem_optimistic_spin() implies ACQUIRE on success */
 		trace_android_vh_record_rwsem_lock_starttime(current, jiffies);
-		rwsem_lock_handler((u64)sem, current, jiffies);
 		return sem;
 	}
 
@@ -1254,7 +1235,6 @@ trylock_again:
 	lockevent_inc(rwsem_wlock);
 	trace_contention_end(sem, 0);
 	trace_android_vh_record_rwsem_lock_starttime(current, jiffies);
-	rwsem_lock_handler((u64)sem, current, jiffies);
 	return sem;
 
 out_nolock:
@@ -1360,7 +1340,6 @@ static inline int __down_read_trylock(struct rw_semaphore *sem)
 			rwsem_set_reader_owned(sem);
 			ret = 1;
 			trace_android_vh_record_rwsem_lock_starttime(current, jiffies);
-			rwsem_lock_handler((u64)sem, current, jiffies);
 			break;
 		}
 	}
@@ -1417,7 +1396,6 @@ static inline void __up_read(struct rw_semaphore *sem)
 		rwsem_wake(sem);
 	}
 	trace_android_vh_record_rwsem_lock_starttime(current, 0);
-	rwsem_lock_handler((u64)sem, current, 0);
 	preempt_enable();
 }
 
@@ -1443,7 +1421,6 @@ static inline void __up_write(struct rw_semaphore *sem)
 	if (unlikely(tmp & RWSEM_FLAG_WAITERS))
 		rwsem_wake(sem);
 	trace_android_vh_record_rwsem_lock_starttime(current, 0);
-	rwsem_lock_handler((u64)sem, current, 0);
 }
 
 /*
